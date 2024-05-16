@@ -91,7 +91,6 @@ class CustomLoss(torch.nn.Module):
 
 
 
-
 ## MAIN ##
 def main():
     # Paths
@@ -103,7 +102,7 @@ def main():
     train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=False, num_workers=1)
 
     # Load model for training
-    model = HAMM_SNN()
+    model = HAMM_SNN(use_snn=False)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
     loss_fn = CustomLoss()
 

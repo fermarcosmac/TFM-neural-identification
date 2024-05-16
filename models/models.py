@@ -47,6 +47,10 @@ class BranchSNN(nn.Module):
         self.lif8 = snn.Leaky(beta=0.99, threshold=0.2, learn_beta=False, reset_mechanism='subtract', spike_grad=spike_grad)
         self.fc9  = nn.Linear(in_features=neurons_per_layer, out_features=1)
         self.lif9 = snn.Leaky(beta=0.99, threshold=0.2, learn_beta=False, reset_mechanism='subtract', spike_grad=spike_grad, output=True)
+        # Activations
+        self.relu  = nn.ReLU()
+        self.tanh = nn.Tanh()
+        self.sigmoid = nn.Sigmoid()
 
         # Set requires_grad=True for all parameters
         for param in self.parameters():
@@ -60,7 +64,7 @@ class BranchSNN(nn.Module):
             x (torch.Tensor): The Fourier Feature matrix of the time vector (t), represented through rate coding
         """
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') 
-        x = x.view(-1, num_ff*ker_length)
+        #x = x.view(-1, num_ff*ker_length)
         x = x.float()
         x = x.to(device)
 
@@ -88,14 +92,16 @@ class BranchSNN(nn.Module):
         mod, mem5 = self.lif5(mod, mem5)
         mod = self.fc6(mod)
         mod, mem6 = self.lif6(mod, mem6)
-        mod = torch.exp(self.sigmoid(mod))
         # Phase prediction
         pha = self.fc7(x)
-        mod, mem7 = self.lif7(mod, mem7)
-        mod = self.fc8(mod)
-        mod, mem8 = self.lif8(mod, mem8)
-        mod = self.fc9(mod)
-        mod, mem9 = self.lif9(mod, mem9)
+        pha, mem7 = self.lif7(pha, mem7)
+        pha = self.fc8(pha)
+        pha, mem8 = self.lif8(pha, mem8)
+        pha = self.fc9(pha)
+        pha, mem9 = self.lif9(pha, mem9)
+
+        mod = torch.squeeze(mod)
+        pha = torch.squeeze(pha)
 
         return mod, pha
     
@@ -170,11 +176,13 @@ class LearnableGains(nn.Module):
     
 
 
-
 # Define the HAMM_SNN2 class
 class HAMM_SNN(nn.Module):
-    def __init__(self,input_size: int = num_ff):
+    def __init__(self, use_snn: bool = False, input_size: int = num_ff):
         super(HAMM_SNN, self).__init__()
+        self.use_snn = use_snn
+        self.input_size = input_size
+        self.sigmoid = nn.Sigmoid()
         self.branch1 = BranchNN(input_size=input_size)
         self.branch2 = BranchNN(input_size=input_size)
         self.branch3 = BranchNN(input_size=input_size)
@@ -188,14 +196,35 @@ class HAMM_SNN(nn.Module):
 
         # Convert data to rates
         #ff = torch.abs(ff) # [0,1] by addin 1
-        # Convert rates to spike trains
-        num_steps = 1000
-        spike_ff = spikegen.rate(ff, num_steps=num_steps)
 
         # SNN branches -> output real and imaginary parts of DFT kernels
-        Ker1_mod, Ker1_pha = self.branch1(ff)
-        Ker2_mod, Ker2_pha= self.branch2(ff)
-        Ker3_mod, Ker3_pha= self.branch3(ff)
+        if self.use_snn:
+            # Redefine branches as SNN
+            self.branch1 = BranchSNN(input_size=self.input_size)
+            self.branch2 = BranchSNN(input_size=self.input_size)
+            self.branch3 = BranchSNN(input_size=self.input_size)
+            # Convert rates to spike trains
+            num_steps = 1000
+            spike_ff = spikegen.rate(ff, num_steps=num_steps)
+            # Forward
+            Ker1_mod, Ker1_pha = self.branch1(spike_ff)
+            Ker2_mod, Ker2_pha = self.branch2(spike_ff)
+            Ker3_mod, Ker3_pha = self.branch3(spike_ff)
+            # Decoding
+            Ker1_mod = torch.mean(Ker1_mod,dim=[0])
+            Ker1_pha = torch.mean(Ker1_pha,dim=[0])
+            Ker1_mod = torch.exp(self.sigmoid(Ker1_mod))
+            Ker2_mod = torch.mean(Ker2_mod,dim=[0])
+            Ker2_pha = torch.mean(Ker2_pha,dim=[0])
+            Ker2_mod = torch.exp(self.sigmoid(Ker2_mod))
+            Ker3_mod = torch.mean(Ker3_mod,dim=[0])
+            Ker3_pha = torch.mean(Ker3_pha,dim=[0])
+            Ker3_mod = torch.exp(self.sigmoid(Ker3_mod))
+        else:
+            # Forward
+            Ker1_mod, Ker1_pha = self.branch1(ff)
+            Ker2_mod, Ker2_pha = self.branch2(ff)
+            Ker3_mod, Ker3_pha = self.branch3(ff)
 
 
 
@@ -247,8 +276,6 @@ class HAMM_SNN(nn.Module):
         x_branch3 = F.conv1d(x**3,weight=ker3.unsqueeze(0).unsqueeze(0))
 
         output = g1*x_branch1 + g2*x_branch2 + g3*x_branch3
-        output = 10*output #---------------------------------------------------------------------------------------------
-
         # Pad the output tensor with zeros at the end of the third mode
         pad_length = x.size(2) - output.size(2)
         output = F.pad(output, (0, pad_length), mode='constant', value=0)
