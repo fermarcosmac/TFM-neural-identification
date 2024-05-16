@@ -14,8 +14,8 @@ save_path_mls = "./inputs_wav/MLS/"
 # External parameters
 fs = 48000
 Norder = 3
-FACTOR_UP = Norder * 2
-fs_up = fs * FACTOR_UP
+FACTOR_UP = Norder
+fs_up = int(fs * FACTOR_UP)
 num_signals = 20
 
 # Sweep parameters

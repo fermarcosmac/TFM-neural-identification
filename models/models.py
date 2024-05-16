@@ -26,18 +26,27 @@ class BranchSNN(nn.Module):
         super(BranchSNN, self).__init__()
         # Define Network architecture
         spike_grad = surrogate.fast_sigmoid(slope=25) # For backpropagation
+        # Common layers
         self.fc1  = nn.Linear(in_features=input_size, out_features=neurons_per_layer)
         self.lif1 = snn.Leaky(beta=0.99, threshold=0, learn_beta=False, reset_mechanism='subtract', spike_grad=spike_grad)
         self.fc2  = nn.Linear(in_features=neurons_per_layer, out_features=neurons_per_layer)
         self.lif2 = snn.Leaky(beta=0.99, threshold=0, learn_beta=False, reset_mechanism='subtract', spike_grad=spike_grad)
-        self.fc3  = nn.Linear(in_features=neurons_per_layer, out_features=ker_length)
-        self.lif3 = snn.Leaky(beta=0.99, threshold=0, learn_beta=False, reset_mechanism='subtract', spike_grad=spike_grad, output=True)
-        #self.fc4  = nn.Linear(in_features=neurons_per_layer, out_features=neurons_per_layer)
-        #self.lif4 = snn.Leaky(beta=0.99, threshold=0.2, learn_beta=False, reset_mechanism='subtract', spike_grad=spike_grad)
-        #self.fc5  = nn.Linear(in_features=neurons_per_layer, out_features=neurons_per_layer)
-        #self.lif5 = snn.Leaky(beta=0.99, threshold=0.2, learn_beta=False, reset_mechanism='subtract', spike_grad=spike_grad)
-        #self.fc6  = nn.Linear(in_features=neurons_per_layer, out_features=ker_length)
-        #self.lif6 = snn.Leaky(beta=0.99, threshold=0.2, learn_beta=False, reset_mechanism='subtract', spike_grad=spike_grad, output=True)
+        self.fc3  = nn.Linear(in_features=neurons_per_layer, out_features=neurons_per_layer)
+        self.lif3 = snn.Leaky(beta=0.99, threshold=0, learn_beta=False, reset_mechanism='subtract', spike_grad=spike_grad)
+        # Modulus prediction layers
+        self.fc4  = nn.Linear(in_features=neurons_per_layer, out_features=neurons_per_layer)
+        self.lif4 = snn.Leaky(beta=0.99, threshold=0.2, learn_beta=False, reset_mechanism='subtract', spike_grad=spike_grad)
+        self.fc5  = nn.Linear(in_features=neurons_per_layer, out_features=neurons_per_layer)
+        self.lif5 = snn.Leaky(beta=0.99, threshold=0.2, learn_beta=False, reset_mechanism='subtract', spike_grad=spike_grad)
+        self.fc6  = nn.Linear(in_features=neurons_per_layer, out_features=1)
+        self.lif6 = snn.Leaky(beta=0.99, threshold=0.2, learn_beta=False, reset_mechanism='subtract', spike_grad=spike_grad, output=True)
+        # Phase prediction layers
+        self.fc7  = nn.Linear(in_features=neurons_per_layer, out_features=neurons_per_layer)
+        self.lif7 = snn.Leaky(beta=0.99, threshold=0.2, learn_beta=False, reset_mechanism='subtract', spike_grad=spike_grad)
+        self.fc8  = nn.Linear(in_features=neurons_per_layer, out_features=neurons_per_layer)
+        self.lif8 = snn.Leaky(beta=0.99, threshold=0.2, learn_beta=False, reset_mechanism='subtract', spike_grad=spike_grad)
+        self.fc9  = nn.Linear(in_features=neurons_per_layer, out_features=1)
+        self.lif9 = snn.Leaky(beta=0.99, threshold=0.2, learn_beta=False, reset_mechanism='subtract', spike_grad=spike_grad, output=True)
 
         # Set requires_grad=True for all parameters
         for param in self.parameters():
@@ -58,25 +67,37 @@ class BranchSNN(nn.Module):
         mem1 = self.lif1.init_leaky() # reset_mem()
         mem2 = self.lif2.init_leaky()
         mem3 = self.lif3.init_leaky()
-        #mem4 = self.lif4.init_leaky()
-        #mem5 = self.lif5.init_leaky()
-        #mem6 = self.lif6.init_leaky()
+        mem4 = self.lif4.init_leaky()
+        mem5 = self.lif5.init_leaky()
+        mem6 = self.lif6.init_leaky()
+        mem7 = self.lif7.init_leaky()
+        mem8 = self.lif8.init_leaky()
+        mem9 = self.lif9.init_leaky()
 
+        # Common layers
         x = self.fc1(x)
         x, mem1 = self.lif1(x, mem1)
         x = self.fc2(x)
         x, mem2 = self.lif2(x, mem2)
         x = self.fc3(x)
         x, mem3 = self.lif3(x, mem3)
-        #x = self.fc4(x)
-        #x, mem4 = self.lif4(x, mem4)
-        #x = self.fc5(x)
-        #x, mem5 = self.lif5(x, mem5)
-        #x = self.fc6(x)
-        #x, mem6 = self.lif6(x, mem6)
-        #gain = x[:,-1]
-        #x = x[:,0:-1]
-        return x,  mem3
+        # Modulus prediction
+        mod = self.fc4(x)
+        mod, mem4 = self.lif4(mod, mem4)
+        mod = self.fc5(mod)
+        mod, mem5 = self.lif5(mod, mem5)
+        mod = self.fc6(mod)
+        mod, mem6 = self.lif6(mod, mem6)
+        mod = torch.exp(self.sigmoid(mod))
+        # Phase prediction
+        pha = self.fc7(x)
+        mod, mem7 = self.lif7(mod, mem7)
+        mod = self.fc8(mod)
+        mod, mem8 = self.lif8(mod, mem8)
+        mod = self.fc9(mod)
+        mod, mem9 = self.lif9(mod, mem9)
+
+        return mod, pha
     
 # Branch NN
 class BranchNN(nn.Module):
@@ -125,8 +146,8 @@ class BranchNN(nn.Module):
         # Modulus prediction
         mod = self.relu(self.fc4(x)) 
         mod = self.relu(self.fc5(mod))
-        mod = self.sigmoid(self.fc6(mod))               # Modulus is nonnegative
-        mod = torch.exp(mod)                            # Network will predict the log-spectrum
+        mod = self.sigmoid(self.fc6(mod))               # log-modulus ranges (-inf 0]
+        mod = torch.exp(mod)                            # Network will predict the log-modulus and output the modulus
         # Phase prediction
         pha = self.relu(self.fc7(x))
         pha = self.relu(self.fc8(pha))
@@ -203,9 +224,9 @@ class HAMM_SNN(nn.Module):
         ker3 = torch.real(torch.fft.ifft(KER3))
 
         # This is necesary for vanilla branch NNs
-        ker1 = torch.squeeze(ker1)
-        ker2 = torch.squeeze(ker2)
-        ker3 = torch.squeeze(ker3)
+        ker1 = self.ifftshift(torch.squeeze(ker1))
+        ker2 = self.ifftshift(torch.squeeze(ker2))
+        ker3 = self.ifftshift(torch.squeeze(ker3))
 
         # Rate decoding:
         # Kernels must span [-1 1]
@@ -226,6 +247,7 @@ class HAMM_SNN(nn.Module):
         x_branch3 = F.conv1d(x**3,weight=ker3.unsqueeze(0).unsqueeze(0))
 
         output = g1*x_branch1 + g2*x_branch2 + g3*x_branch3
+        output = 10*output #---------------------------------------------------------------------------------------------
 
         # Pad the output tensor with zeros at the end of the third mode
         pad_length = x.size(2) - output.size(2)
@@ -256,3 +278,17 @@ class HAMM_SNN(nn.Module):
         extended_mod = torch.cat((Ker_mod, reflected_mod), dim=-1)
         extended_pha = torch.cat((Ker_pha, reflected_pha), dim=-1)
         return extended_mod, extended_pha
+    
+    def ifftshift(self, tensor, dim=None):
+        if dim is None:
+            dim = list(range(tensor.dim()))  # Shift all dimensions by default
+        elif not isinstance(dim, (list, tuple)):
+            dim = [dim]  # Convert to list if a single dimension is provided
+
+        shifted_tensor = tensor
+        for d in dim:
+            mid = shifted_tensor.shape[d] // 2
+            shifted_tensor = torch.roll(shifted_tensor, shifts=mid, dims=d)
+            if shifted_tensor.shape[d] % 2 == 0:  # For even-sized dimensions, flip the first half
+                shifted_tensor = torch.flip(shifted_tensor, dims=[d])
+        return shifted_tensor

@@ -53,19 +53,40 @@ class CustomDataset(Dataset):
 
 class CustomLoss(torch.nn.Module):
 
-    def forward(self, y_hat, y, ker1, ker2, ker3, nfft=512):
+    def __init__(self, alpha=1e-4):
+        super(CustomLoss, self).__init__()
+        self.alpha = alpha
 
+    def generate_frequency_weights(self,n_pts):
+        weights_half = torch.log(torch.linspace(1, 1e6, int(n_pts/2)))
+        weights_half = weights_half/torch.max(weights_half)
+        weights = torch.cat((weights_half,torch.flip(weights_half,dims=[-1])),dim=-1)
+        return weights
+
+    def forward(self, y_hat, y, ker1, ker2, ker3):
+        # Compute DFT domain signals
+        nfft = y.shape[-1]
         dft_y_hat = torch.fft.fft(y_hat, n=nfft)
         dft_y = torch.fft.fft(y, n=nfft)
+
+        # Apply frequency weights
+        freq_weights = self.generate_frequency_weights(y.shape[-1])
+        #freq_weights = torch.ones(freq_weights.shape) # This eliminates the effect of frequency weighting
+        dft_y_hat = dft_y_hat
+        dft_y = dft_y
+
+        # Spectral MSE
         squared_mag_diff = torch.abs(dft_y_hat - dft_y)**2
         spectral_mse = torch.mean(squared_mag_diff)
 
         # L1 regularization for the learnt kernels
-        alpha = 1e-6
         L1_reg = torch.norm(ker1,p=1) + torch.norm(ker2,p=1) + torch.norm(ker3,p=1)
 
-    
-        return spectral_mse + alpha*L1_reg
+        # Comparison plot
+        # plt.plot(np.log(1e-5+np.abs(np.squeeze((torch.abs(dft_y)).detach().numpy()))))
+        # plt.plot(np.log(1e-5+np.abs(np.squeeze((torch.abs(dft_y_hat)).detach().numpy()))))
+
+        return spectral_mse #+ self.alpha*L1_reg
         
 
 
@@ -87,7 +108,8 @@ def main():
     loss_fn = CustomLoss()
 
     # Train! -> Original
-    epochs = 100 
+    epochs = 100
+    branch_idx = 1
     for epoch in range(epochs):
 
         total_loss = 0
@@ -104,8 +126,13 @@ def main():
             for name, param in model.named_parameters():
                 if 'get_gains' in name:
                     param.requires_grad = False
+                # Uncomment to freeze all branches but one consecutively (through epochs)
+                #elif f'branch{branch_idx}' not in name:
+                    #param.requires_grad = False
                 else:
                     param.requires_grad = True
+            # Update branch index (branch to update in next iteration) 
+            branch_idx = branch_idx % 3 + 1
 
         for input_ess, input_mls, output_ess, output_mls in tqdm(train_dataloader):
 
