@@ -126,7 +126,7 @@ def save_tensor_as_wav(tensor, filename, sample_rate=44100):
 ## MAIN ##
 def main():
     # User parameters
-    use_snn = True
+    use_snn = False
 
     # Paths
     input_wavs_dir = './inputs_wav/'
@@ -145,7 +145,7 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
     loss_fn = CustomLoss()
 
-    # Train! -> Original
+    # Train!
     epochs = 100
     branch_idx = 1
     for epoch in range(epochs):
