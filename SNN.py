@@ -21,6 +21,7 @@ import os
 from tqdm import tqdm
 from models.models import HAMM_SNN
 import matplotlib.pyplot as plt
+from scipy.io.wavfile import write
 
 
 class CustomDataset(Dataset):
@@ -109,12 +110,24 @@ class CustomLoss(torch.nn.Module):
         # plt.plot(np.log(1e-5+np.abs(np.squeeze((torch.abs(dft_y_hat)).detach().numpy()))))
 
         return spectral_mse #+ self.alpha*L1_reg
+    
+def save_tensor_as_wav(tensor, filename, sample_rate=44100):
+    # Convert the tensor to a numpy array
+    array = tensor.cpu().detach().numpy()
+    # Normalize the array to the range -1 to 1
+    array = array / np.max(np.abs(array))
+    # Scale to 16-bit integer values
+    array_int24 = np.int32(array * 2147483647)  # Scale to 24-bit range
+    # Save the array as a WAV file
+    write(filename, sample_rate, array_int24)
         
-
 
 
 ## MAIN ##
 def main():
+    # User parameters
+    use_snn = True
+
     # Paths
     input_wavs_dir = './inputs_wav/'
     output_wavs_dir =  './outputs_wav/'
@@ -127,7 +140,7 @@ def main():
     train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=False, num_workers=1)
 
     # Load model for training
-    model = HAMM_SNN(use_snn=False)
+    model = HAMM_SNN(use_snn=use_snn)
     model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
     loss_fn = CustomLoss()
@@ -161,8 +174,6 @@ def main():
 
         for input_ess, input_mls, output_ess, output_mls in tqdm(train_dataloader):
 
-            if epoch % 2 != 0:
-                hey=0
             # I/O signals: normalized to [-1 1]
             x =  input_ess
             y = output_ess
@@ -177,9 +188,6 @@ def main():
             # Forward pass
             y_hat, ker1, ker2, ker3 = model(x,max_y_mod)
 
-            if epoch == 10 or epoch == 19:
-                hey=0
-
             # Compute loss
             loss = loss_fn(y_hat, y, ker1, ker2, ker3) # Where should this loss be defined
             total_loss += loss.item()
@@ -189,18 +197,34 @@ def main():
             # Check model.branchn.weight -> Gradient and whether it changes or not when performing optimizer.step()
             optimizer.step()
             
-
-
         avg_loss = total_loss / len(train_dataloader)
-
-
-        # Plot estimated output evolution
-        #if epoch == 1:
-        #    plt.plot(np.squeeze((y).detach().numpy()))
-        #plt.plot(np.squeeze((y_hat).detach().numpy()))
-
-
         print(f"Epoch {epoch+1}, Train Loss: {avg_loss:.4f}")
+
+    # Final forward to save the estimated kernels
+    _, ker1, ker2, ker3 = model(x,max_y_mod)
+    # Rotate to center
+    ker1 = model.ifftshift(ker1)
+    ker2 = model.ifftshift(ker2)
+    ker3 = model.ifftshift(ker3)
+    # Save
+    if use_snn:
+        save_path_1 = os.path.join('kernels/SNN','ker1.wav')
+        save_path_2 = os.path.join('kernels/SNN','ker2.wav')
+        save_path_3 = os.path.join('kernels/SNN','ker3.wav')
+        save_path_model = os.path.join('models/SNN','model.pth')
+    else:
+        save_path_1 = os.path.join('kernels/NN','ker1.wav')
+        save_path_2 = os.path.join('kernels/NN','ker2.wav')
+        save_path_3 = os.path.join('kernels/NN','ker3.wav')
+        save_path_model = os.path.join('models/NN','model.pth')
+
+    # Save the identified kernels
+    save_tensor_as_wav(ker1, save_path_1)
+    save_tensor_as_wav(ker2, save_path_2)
+    save_tensor_as_wav(ker3, save_path_3)
+
+    # Save the model
+    torch.save(model.state_dict(), save_path_model)
 
 if __name__ == '__main__':
     main() # aparentemente esto es necesario para windows

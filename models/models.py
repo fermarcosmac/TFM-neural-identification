@@ -22,7 +22,7 @@ x_length = 570000
 # Branch SNN
 class BranchSNN(nn.Module):
 
-    def __init__(self, input_size: int = num_ff*ker_length, neurons_per_layer: int = 512, **kwargs):
+    def __init__(self, input_size: int = num_ff*ker_length, neurons_per_layer: int = 64, **kwargs):
         super(BranchSNN, self).__init__()
         # Define Network architecture
         spike_grad = surrogate.fast_sigmoid(slope=25) # For backpropagation
@@ -200,11 +200,11 @@ class HAMM_SNN(nn.Module):
 
         if self.use_snn:
             # Redefine branches as SNN
-            self.branch1 = BranchSNN(input_size=self.input_size)
-            self.branch2 = BranchSNN(input_size=self.input_size)
-            self.branch3 = BranchSNN(input_size=self.input_size)
+            self.branch1 = BranchSNN(input_size=self.input_size).to(self.device)
+            self.branch2 = BranchSNN(input_size=self.input_size).to(self.device)
+            self.branch3 = BranchSNN(input_size=self.input_size).to(self.device)
             # Convert rates to spike trains
-            num_steps = 1000
+            num_steps = int(1000 * 1e-3 * 5)
             spike_ff = spikegen.rate(ff, num_steps=num_steps)
             # Forward
             Ker1_mod, Ker1_pha = self.branch1(spike_ff)
