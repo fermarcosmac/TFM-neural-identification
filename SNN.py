@@ -1,9 +1,7 @@
-# TODO
 
-# Something important is to define the maximum memory of the kernel diagonals (length of t-mode/batch size of data tensor)
-# While developing, I will assume that I consider 512 samples (input time steps)
 
-my_pc = False
+
+my_pc = True
 
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -126,7 +124,7 @@ def save_tensor_as_wav(tensor, filename, sample_rate=44100):
 ## MAIN ##
 def main():
     # User parameters
-    use_snn = True
+    use_snn = False
 
     # Paths
     input_wavs_dir = './inputs_wav/'
@@ -223,9 +221,9 @@ def main():
         save_path_loss = os.path.join('models/NN','loss_history.npy')
 
     # Save the identified kernels
-    save_tensor_as_wav(ker1, save_path_1)
-    save_tensor_as_wav(ker2, save_path_2)
-    save_tensor_as_wav(ker3, save_path_3)
+    save_tensor_as_wav(ker1, save_path_1, sample_rate=144000)
+    save_tensor_as_wav(ker2, save_path_2, sample_rate=144000)
+    save_tensor_as_wav(ker3, save_path_3, sample_rate=144000)
 
     # Save the model
     torch.save(model.state_dict(), save_path_model)
