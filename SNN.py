@@ -126,7 +126,7 @@ def save_tensor_as_wav(tensor, filename, sample_rate=44100):
 ## MAIN ##
 def main():
     # User parameters
-    use_snn = False
+    use_snn = True
 
     # Paths
     input_wavs_dir = './inputs_wav/'
@@ -148,6 +148,7 @@ def main():
     # Train!
     epochs = 100
     branch_idx = 1
+    loss_history = []
     for epoch in range(epochs):
 
         total_loss = 0
@@ -198,6 +199,7 @@ def main():
             optimizer.step()
             
         avg_loss = total_loss / len(train_dataloader)
+        loss_history.append(avg_loss)
         print(f"Epoch {epoch+1}, Train Loss: {avg_loss:.4f}")
 
     # Final forward to save the estimated kernels
@@ -212,11 +214,13 @@ def main():
         save_path_2 = os.path.join('kernels/SNN','ker2.wav')
         save_path_3 = os.path.join('kernels/SNN','ker3.wav')
         save_path_model = os.path.join('models/SNN','model.pth')
+        save_path_loss = os.path.join('models/SNN','loss_history.npy')
     else:
         save_path_1 = os.path.join('kernels/NN','ker1.wav')
         save_path_2 = os.path.join('kernels/NN','ker2.wav')
         save_path_3 = os.path.join('kernels/NN','ker3.wav')
         save_path_model = os.path.join('models/NN','model.pth')
+        save_path_loss = os.path.join('models/NN','loss_history.npy')
 
     # Save the identified kernels
     save_tensor_as_wav(ker1, save_path_1)
@@ -225,6 +229,9 @@ def main():
 
     # Save the model
     torch.save(model.state_dict(), save_path_model)
+
+    # Save the loss history
+    np.save(save_path_loss, np.array(loss_history))
 
 if __name__ == '__main__':
     main() # aparentemente esto es necesario para windows
