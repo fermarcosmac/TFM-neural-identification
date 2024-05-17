@@ -180,24 +180,24 @@ class LearnableGains(nn.Module):
 class HAMM_SNN(nn.Module):
     def __init__(self, use_snn: bool = False, input_size: int = num_ff):
         super(HAMM_SNN, self).__init__()
-        self.use_snn = use_snn
-        self.input_size = input_size
-        self.sigmoid = nn.Sigmoid()
+        # Learnable attributes
         self.branch1 = BranchNN(input_size=input_size)
         self.branch2 = BranchNN(input_size=input_size)
         self.branch3 = BranchNN(input_size=input_size)
         self.get_gains   = LearnableGains()
+        # Other attributes
+        self.use_snn = use_snn
+        self.input_size = input_size
+        self.sigmoid = nn.Sigmoid()
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') 
 
     def forward(self, x, max_y_mod):
-        #t = np.array(range(ker_length))+1
+
+        # Invariant fourier features
         t = np.linspace(start=0,stop=2,num=ker_length*2)
         ff = self.compute_fourier_features(t,num_features=num_ff)
         ff = torch.transpose(torch.from_numpy(ff),0,1)
 
-        # Convert data to rates
-        #ff = torch.abs(ff) # [0,1] by addin 1
-
-        # SNN branches -> output real and imaginary parts of DFT kernels
         if self.use_snn:
             # Redefine branches as SNN
             self.branch1 = BranchSNN(input_size=self.input_size)
@@ -253,9 +253,9 @@ class HAMM_SNN(nn.Module):
         ker3 = torch.real(torch.fft.ifft(KER3))
 
         # This is necesary for vanilla branch NNs
-        ker1 = self.ifftshift(torch.squeeze(ker1))
-        ker2 = self.ifftshift(torch.squeeze(ker2))
-        ker3 = self.ifftshift(torch.squeeze(ker3))
+        ker1 = torch.squeeze(ker1)
+        ker2 = torch.squeeze(ker2)
+        ker3 = torch.squeeze(ker3)
 
         # Rate decoding:
         # Kernels must span [-1 1]

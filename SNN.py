@@ -3,9 +3,14 @@
 # Something important is to define the maximum memory of the kernel diagonals (length of t-mode/batch size of data tensor)
 # While developing, I will assume that I consider 512 samples (input time steps)
 
+my_pc = False
+
 import torch
 from torch.utils.data import Dataset, DataLoader
-import torchaudio
+if my_pc:
+    import torchaudio
+else:
+    import librosa
 from torch import nn
 import torch.nn.functional as F
 import snntorch as snn
@@ -36,17 +41,34 @@ class CustomDataset(Dataset):
 
     def __getitem__(self, idx):
         # Waveforms
-        input_ess, sr = torchaudio.load(self.input_ess_files[idx])
-        input_ess = input_ess.contiguous()  # Ensure contiguous memory
+        if my_pc:
+            input_ess, sr = torchaudio.load(self.input_ess_files[idx])
+            input_ess = input_ess.contiguous()  # Ensure contiguous memory
 
-        input_mls, sr = torchaudio.load(self.input_mls_files[idx])
-        input_mls = input_mls.contiguous()  # Ensure contiguous memory
+            input_mls, sr = torchaudio.load(self.input_mls_files[idx])
+            input_mls = input_mls.contiguous()  # Ensure contiguous memory
 
-        output_ess, sr = torchaudio.load(self.output_ess_files[idx])
-        output_ess = output_ess.contiguous()  # Ensure contiguous memory
+            output_ess, sr = torchaudio.load(self.output_ess_files[idx])
+            output_ess = output_ess.contiguous()  # Ensure contiguous memory
 
-        output_mls, sr = torchaudio.load(self.output_mls_files[idx])
-        output_mls = output_mls.contiguous()  # Ensure contiguous memory
+            output_mls, sr = torchaudio.load(self.output_mls_files[idx])
+            output_mls = output_mls.contiguous()  # Ensure contiguous memory
+        else:
+            input_ess, sr = librosa.load(self.input_ess_files[idx],sr=None)
+            input_ess = torch.unsqueeze(torch.Tensor(input_ess),dim=0)
+            input_ess = input_ess.contiguous()  # Ensure contiguous memory
+
+            input_mls, sr = librosa.load(self.input_mls_files[idx],sr=None)
+            input_mls = torch.unsqueeze(torch.Tensor(input_mls),dim=0)
+            input_mls = input_mls.contiguous()  # Ensure contiguous memory
+
+            output_ess, sr = librosa.load(self.output_ess_files[idx],sr=None)
+            output_ess = torch.unsqueeze(torch.Tensor(output_ess),dim=0)
+            output_ess = output_ess.contiguous()  # Ensure contiguous memory
+
+            output_mls, sr = librosa.load(self.output_mls_files[idx],sr=None)
+            output_mls = torch.unsqueeze(torch.Tensor(output_mls),dim=0)
+            output_mls = output_mls.contiguous()  # Ensure contiguous memory
 
         return input_ess, input_mls, output_ess, output_mls
 
@@ -97,12 +119,16 @@ def main():
     input_wavs_dir = './inputs_wav/'
     output_wavs_dir =  './outputs_wav/'
 
+    # Device
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') 
+
     # Load data
     train_dataset = CustomDataset(input_wavs_dir,output_wavs_dir)
     train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=False, num_workers=1)
 
     # Load model for training
     model = HAMM_SNN(use_snn=False)
+    model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
     loss_fn = CustomLoss()
 
@@ -142,6 +168,9 @@ def main():
             y = output_ess
             max_y_mod = torch.max(torch.abs(y))
             y = y / max_y_mod
+            # Signals to device
+            x = x.to(device)
+            y = y.to(device)
 
             optimizer.zero_grad()
 
