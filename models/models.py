@@ -14,7 +14,7 @@ from scipy.signal import convolve
 # plt.plot(np.squeeze((ker3).detach().numpy()))
 # plt.show()
 
-ker_length  = 64 # Number of samples in identified kernels
+ker_length  = 19 # Number of samples in identified kernels (divided by 4)
 num_ff = 20 # Number of Fourier Features
 x_length = 570000
  
@@ -181,9 +181,14 @@ class HAMM_SNN(nn.Module):
     def __init__(self, use_snn: bool = False, input_size: int = num_ff):
         super(HAMM_SNN, self).__init__()
         # Learnable attributes
-        self.branch1 = BranchNN(input_size=input_size)
-        self.branch2 = BranchNN(input_size=input_size)
-        self.branch3 = BranchNN(input_size=input_size)
+        if use_snn:
+            self.branch1 = BranchNN(input_size=input_size)
+            self.branch2 = BranchNN(input_size=input_size)
+            self.branch3 = BranchNN(input_size=input_size)
+        else:
+            self.branch1 = BranchNN(input_size=input_size)
+            self.branch2 = BranchNN(input_size=input_size)
+            self.branch3 = BranchNN(input_size=input_size)
         self.get_gains   = LearnableGains()
         # Other attributes
         self.use_snn = use_snn
@@ -199,10 +204,6 @@ class HAMM_SNN(nn.Module):
         ff = torch.transpose(torch.from_numpy(ff),0,1)
 
         if self.use_snn:
-            # Redefine branches as SNN
-            self.branch1 = BranchSNN(input_size=self.input_size).to(self.device)
-            self.branch2 = BranchSNN(input_size=self.input_size).to(self.device)
-            self.branch3 = BranchSNN(input_size=self.input_size).to(self.device)
             # Convert rates to spike trains
             num_steps = int(1000 * 1e-3 * 5)
             spike_ff = spikegen.rate(ff, num_steps=num_steps)
