@@ -1,14 +1,8 @@
-
-
-
-my_pc = True
+import sys, os
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 import torch
 from torch.utils.data import Dataset, DataLoader
-if my_pc:
-    import torchaudio
-else:
-    import librosa
 from torch import nn
 import torch.nn.functional as F
 import snntorch as snn
@@ -20,6 +14,11 @@ from tqdm import tqdm
 from models.models import HAMM_SNN
 import matplotlib.pyplot as plt
 from scipy.io.wavfile import write
+my_pc = True
+if my_pc:
+    import torchaudio
+else:
+    import librosa
 
 
 class CustomDataset(Dataset):
