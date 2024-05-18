@@ -14,7 +14,7 @@ from tqdm import tqdm
 from models.models import HAMM_SNN
 import matplotlib.pyplot as plt
 from scipy.io.wavfile import write
-my_pc = True
+my_pc = False
 if my_pc:
     import torchaudio
 else:
@@ -123,7 +123,7 @@ def save_tensor_as_wav(tensor, filename, sample_rate=44100):
 ## MAIN ##
 def main():
     # User parameters
-    use_snn = False
+    use_snn = True
 
     # Paths
     input_wavs_dir = './inputs_wav/'
