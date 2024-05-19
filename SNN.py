@@ -143,7 +143,7 @@ def main():
     loss_fn = CustomLoss()
 
     # Train!
-    epochs = 100
+    epochs = 200
     branch_idx = 1
     loss_history = []
     for epoch in range(epochs):
