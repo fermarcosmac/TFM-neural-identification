@@ -388,8 +388,23 @@ def main():
     mu_SNN_mls = np.mean(error_SNN_mls)
     std_SNN_mls = np.std(error_SNN_mls)
 
-
-# I SHLOULD PLOT AN EXAMPLE OF TIME DOMAIN AND FREQUENCY DOMAIN APPROXIMATIONS (2x2 SUBPLOTS)
+    print("Results:")
+    print("========")
+    print("ESS -> NN:")
+    print(f"Mean Spectral Error: {mu_NN_ess:.4f}")
+    print(f"Standard Deviation: {std_NN_ess:.4f}")
+    print("========")
+    print("MLS -> NN:")
+    print(f"Mean Spectral Error: {mu_NN_mls:.4f}")
+    print(f"Standard Deviation: {std_NN_mls:.4f}")
+    print("========")
+    print("ESS -> SNN:")
+    print(f"Mean Spectral Error: {mu_SNN_ess:.4f}")
+    print(f"Standard Deviation: {std_SNN_ess:.4f}")
+    print("========")
+    print("MLS -> SNN:")
+    print(f"Mean Spectral Error: {mu_SNN_mls:.4f}")
+    print(f"Standard Deviation: {std_SNN_mls:.4f}")
 
 
 if __name__ == '__main__':
