@@ -123,7 +123,7 @@ def save_tensor_as_wav(tensor, filename, sample_rate=44100):
 ## MAIN ##
 def main():
     # User parameters
-    use_snn = True
+    use_snn = False
 
     # Paths
     input_wavs_dir = './inputs_wav/'
@@ -194,6 +194,21 @@ def main():
             loss.backward()
             # Check model.branchn.weight -> Gradient and whether it changes or not when performing optimizer.step()
             optimizer.step()
+
+            # Repeat for MLS
+            x =  input_mls
+            y = output_mls
+            max_y_mod = torch.max(torch.abs(y))
+            y = y / max_y_mod
+            x = x.to(device)
+            y = y.to(device)
+            optimizer.zero_grad()
+            y_hat, ker1, ker2, ker3 = model(x,max_y_mod)
+            loss = loss_fn(y_hat, y, ker1, ker2, ker3)
+            total_loss += loss.item()
+            loss.backward()
+            optimizer.step()
+
             
         avg_loss = total_loss / len(train_dataloader)
         loss_history.append(avg_loss)
