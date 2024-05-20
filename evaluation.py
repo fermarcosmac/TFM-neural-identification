@@ -163,13 +163,14 @@ def main():
     NN_loss_history = np.load('models/NN/loss_history.npy')
 
     # Plot the loss history
-    plt.figure(1)
+    plt.figure(figsize=(7,4))
     plt.plot(NN_loss_history, label='NN')
     plt.plot(SNN_loss_history, label='SNN')
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.title('Training Loss Evolution')
     plt.legend()
+    plt.tight_layout()
     plt.show()
 
 
@@ -185,7 +186,7 @@ def main():
 
     # Plot kernels
     # Create a figure and a 1x3 subplot grid
-    fig, axs = plt.subplots(3, 3, figsize=(15, 10))
+    fig, axs = plt.subplots(3, 3, figsize=(7, 7))
     # Iterate over the dictionary items and plot each signal
     for ax, (title, signal) in zip(axs[0], ker_gt_dict.items()):
         ax.plot(signal)
@@ -232,7 +233,7 @@ def main():
             print(f"  {method}: {error}")
 
     # Plot the signals for visualization
-    fig, axs = plt.subplots(3, 2, figsize=(15, 10))
+    fig, axs = plt.subplots(3, 2, figsize=(6, 6))
 
     for i, key in enumerate(ker_gt_dict):
         true_signal = ker_gt_dict[key]
@@ -321,7 +322,7 @@ def main():
         # Plot one example
         if plot_flag:
             ## Time domain signals ##
-            fig, axs = plt.subplots(2, 2, figsize=(15, 10))
+            fig, axs = plt.subplots(2, 2, figsize=(7, 5))
             # NN with ESS input
             axs[0, 0].plot(np.squeeze(y_ess.cpu().numpy())[140000:150000], label='True')
             axs[0, 0].plot(np.squeeze(y_hat_NN_ess.detach().cpu().numpy())[140000:150000], label='Predicted')
@@ -350,7 +351,7 @@ def main():
             plt.show()
 
             ## Frequency domain signals ##
-            fig, axs = plt.subplots(2, 2, figsize=(15, 10))
+            fig, axs = plt.subplots(2, 2, figsize=(7, 5))
             # NN with ESS input
             plot_dft(axs[0, 0], y_ess, y_hat_NN_ess, 'NN with ESS input', sr)
 
