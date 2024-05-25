@@ -7,7 +7,7 @@ from scipy.signal import chirp, max_len_seq
 # External parameters
 fs = 48000
 Norder = 3
-FACTOR_UP = Norder*2
+FACTOR_UP = Norder
 fs_up = fs*FACTOR_UP
 
 # Sweep parameters

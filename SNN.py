@@ -14,7 +14,7 @@ from tqdm import tqdm
 from models.models import HAMM_SNN
 import matplotlib.pyplot as plt
 from scipy.io.wavfile import write
-my_pc = False
+my_pc = True
 if my_pc:
     import torchaudio
 else:
