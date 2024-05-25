@@ -1,5 +1,5 @@
 import sys, os
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
 
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -144,75 +144,83 @@ def main():
 
     # Train!
     epochs = 200
-    branch_idx = 1
     loss_history = []
-    for epoch in range(epochs):
 
+    # Define function to freeze/unfreeze branches
+    def freeze_unfreeze_branches(model, branch_to_train=None):
+        for name, param in model.named_parameters():
+            if branch_to_train:
+                if f'branch{branch_to_train}' in name:
+                    param.requires_grad = True
+                else:
+                    param.requires_grad = False
+            else:
+                param.requires_grad = True
+
+    for epoch in range(epochs):
         total_loss = 0
         model.train()
 
-        # Narendra-Gallman inspiration
-        if epoch % 2 == 0:  # Freeze branches every 2 epochs
+        # Define branch training strategy
+        if epoch < 50:
+            freeze_unfreeze_branches(model, branch_to_train=1)
+            train_order = 1
+        elif epoch < 100:
+            freeze_unfreeze_branches(model, branch_to_train=2)
+            train_order = 2
+        elif epoch < 150:
+            freeze_unfreeze_branches(model, branch_to_train=3)
+            train_order = 3
+        else:
+            freeze_unfreeze_branches(model)
+            train_order = 0 # Train all
+
+        if epoch % 2 == 0:
             for name, param in model.named_parameters():
                 if 'branch' in name:
                     param.requires_grad = False
                 else:
                     param.requires_grad = True
-        else:  # Freeze gains in every other epoch
+        else:
             for name, param in model.named_parameters():
                 if 'get_gains' in name:
                     param.requires_grad = False
-                # Uncomment to freeze all branches but one consecutively (through epochs)
-                #elif f'branch{branch_idx}' not in name:
-                    #param.requires_grad = False
                 else:
                     param.requires_grad = True
-            # Update branch index (branch to update in next iteration) 
-            branch_idx = branch_idx % 3 + 1
 
         for input_ess, input_mls, output_ess, output_mls in tqdm(train_dataloader):
-
-            # I/O signals: normalized to [-1 1]
-            x =  input_ess
+            # ESS
+            x = input_ess
             y = output_ess
             max_y_mod = torch.max(torch.abs(y))
             y = y / max_y_mod
-            # Signals to device
             x = x.to(device)
             y = y.to(device)
 
             optimizer.zero_grad()
-
-            # Forward pass
-            y_hat, ker1, ker2, ker3 = model(x,max_y_mod)
-
-            # Compute loss
-            loss = loss_fn(y_hat, y, ker1, ker2, ker3) # Where should this loss be defined
+            y_hat, ker1, ker2, ker3 = model(x, train_order)
+            loss = loss_fn(y_hat, y, ker1, ker2, ker3)
             total_loss += loss.item()
-
-            # Backpropagate
             loss.backward()
-            # Check model.branchn.weight -> Gradient and whether it changes or not when performing optimizer.step()
             optimizer.step()
 
-            # Repeat for MLS
-            x =  input_mls
+            # MLS
+            x = input_mls
             y = output_mls
             max_y_mod = torch.max(torch.abs(y))
             y = y / max_y_mod
             x = x.to(device)
             y = y.to(device)
             optimizer.zero_grad()
-            y_hat, ker1, ker2, ker3 = model(x,max_y_mod)
+            y_hat, ker1, ker2, ker3 = model(x, max_y_mod)
             loss = loss_fn(y_hat, y, ker1, ker2, ker3)
             total_loss += loss.item()
             loss.backward()
             optimizer.step()
 
-            
         avg_loss = total_loss / len(train_dataloader)
         loss_history.append(avg_loss)
-        print(f"Epoch {epoch+1}, Train Loss: {avg_loss:.4f}")
+        print(f"Epoch {epoch + 1}, Train Loss: {avg_loss:.4f}")
 
     # Final forward to save the estimated kernels
     _, ker1, ker2, ker3 = model(x,max_y_mod)

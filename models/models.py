@@ -196,7 +196,7 @@ class HAMM_SNN(nn.Module):
         self.sigmoid = nn.Sigmoid()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') 
 
-    def forward(self, x, max_y_mod):
+    def forward(self, x, train_order):
 
         # Invariant fourier features
         t = np.linspace(start=0,stop=2,num=ker_length*2)
@@ -265,11 +265,22 @@ class HAMM_SNN(nn.Module):
         #ker3 = 2*((torch.sum(ker3, dim=0)/num_steps) - 0.5)
         # SNNS ARE SATURATING AT -1 OR +1. I DEFINITELY NEED AN EXTERNAL LEARNABLE GAIN
 
-        # Gains must be nonzero
+        # Set gains to activate selected branches
         gains = 0.01 * self.get_gains()
-        g1   = gains[0]
-        g2   = gains[1]
-        g3   = gains[2]
+        g1 = 0
+        g2 = 0
+        g3 = 0
+        match train_order:
+            case 0:
+                g1   = gains[0]
+                g2   = gains[1]
+                g3   = gains[2]
+            case 1:
+                g1   = gains[0]
+            case 2:
+                g2   = gains[1]
+            case 3:
+                g3   = gains[2]
 
         # Hammerstein logic -> went back to previous approach but assigning self.ker3_conv.weight.data (without the [0])
         x_branch1 = F.conv1d(x,   weight=ker1.unsqueeze(0).unsqueeze(0))
