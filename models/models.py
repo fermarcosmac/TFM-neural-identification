@@ -14,7 +14,7 @@ from scipy.signal import convolve
 # plt.plot(np.squeeze((ker3).detach().numpy()))
 # plt.show()
 
-ker_length  = 19 # Number of samples in identified kernels (divided by 4)
+ker_length  = 19*2 # Number of samples in identified kernels (divided by 4)
 num_ff = 20 # Number of Fourier Features
 x_length = 570000
  
@@ -157,7 +157,7 @@ class BranchNN(nn.Module):
         # Phase prediction
         pha = self.relu(self.fc7(x))
         pha = self.relu(self.fc8(pha))
-        pha = self.fc9(pha)                             # Predict unwrapped phase (any value)
+        pha = -2*torch.pi * self.sigmoid(self.fc9(pha))       # Predict inter-sample phase differences [-2pi 0]
 
         mod = torch.squeeze(mod)
         pha = torch.squeeze(pha)
@@ -175,13 +175,27 @@ class LearnableGains(nn.Module):
         return torch.abs(self.gains)  # Nonnegative gains
     
 
+class LearnableDFT(nn.Module):
+    def __init__(self, length):
+        super(LearnableDFT, self).__init__()
+        self.modulus = nn.Parameter(torch.abs(torch.randn(length)))
+        self.phase = nn.Parameter(torch.randn(length)-2)
+
+    def forward(self,x):
+        # I include an input (x) for consistency with the other models, even though these are simply learnable vectors
+        return self.modulus, self.phase
+    
 
 # Define the HAMM_SNN2 class
 class HAMM_SNN(nn.Module):
-    def __init__(self, use_snn: bool = False, input_size: int = num_ff):
+    def __init__(self, use_snn: bool = False, ablation_model: bool = False, input_size: int = num_ff):
         super(HAMM_SNN, self).__init__()
         # Learnable attributes
-        if use_snn:
+        if ablation_model:
+            self.branch1 = LearnableDFT(length=2*ker_length)
+            self.branch2 = LearnableDFT(length=2*ker_length)
+            self.branch3 = LearnableDFT(length=2*ker_length)
+        elif use_snn:
             self.branch1 = BranchNN(input_size=input_size)
             self.branch2 = BranchNN(input_size=input_size)
             self.branch3 = BranchNN(input_size=input_size)
@@ -223,11 +237,14 @@ class HAMM_SNN(nn.Module):
             Ker3_mod = torch.exp(self.sigmoid(Ker3_mod))
         else:
             # Forward
-            Ker1_mod, Ker1_pha = self.branch1(ff)
-            Ker2_mod, Ker2_pha = self.branch2(ff)
-            Ker3_mod, Ker3_pha = self.branch3(ff)
+            Ker1_mod, Ker1_pha_diff = self.branch1(ff)
+            Ker2_mod, Ker2_pha_diff = self.branch2(ff)
+            Ker3_mod, Ker3_pha_diff = self.branch3(ff)
 
-
+        # Let us predict the phase differences between samples and here build back the unwrapped phase information
+        Ker1_pha = torch.cumsum(Ker1_pha_diff, dim=0)
+        Ker2_pha = torch.cumsum(Ker2_pha_diff, dim=0)
+        Ker3_pha = torch.cumsum(Ker3_pha_diff, dim=0)
 
         # Extend spectra in Hermitian form (so time-domain equivalent is real-valued)
         KER1_mod_extended, KER1_pha_extended = self.hermitian_extend(Ker1_mod, Ker1_pha)

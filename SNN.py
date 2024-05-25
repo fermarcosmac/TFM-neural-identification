@@ -14,6 +14,7 @@ from tqdm import tqdm
 from models.models import HAMM_SNN
 import matplotlib.pyplot as plt
 from scipy.io.wavfile import write
+from monai.networks.layers import HilbertTransform
 my_pc = True
 if my_pc:
     import torchaudio
@@ -71,7 +72,7 @@ class CustomDataset(Dataset):
         return input_ess, input_mls, output_ess, output_mls
 
 
-class CustomLoss(torch.nn.Module):
+""" class CustomLoss(torch.nn.Module):
 
     def __init__(self, alpha=1e-4):
         super(CustomLoss, self).__init__()
@@ -96,7 +97,7 @@ class CustomLoss(torch.nn.Module):
         dft_y = dft_y
 
         # Spectral MSE
-        squared_mag_diff = torch.abs(dft_y_hat - dft_y)**2
+        squared_mag_diff = torch.log(torch.abs(dft_y_hat - dft_y)**2)
         spectral_mse = torch.mean(squared_mag_diff)
 
         # L1 regularization for the learnt kernels
@@ -106,7 +107,53 @@ class CustomLoss(torch.nn.Module):
         # plt.plot(np.log(1e-5+np.abs(np.squeeze((torch.abs(dft_y)).detach().numpy()))))
         # plt.plot(np.log(1e-5+np.abs(np.squeeze((torch.abs(dft_y_hat)).detach().numpy()))))
 
-        return spectral_mse #+ self.alpha*L1_reg
+        return spectral_mse #+ self.alpha*L1_reg """
+    
+class CustomLoss(torch.nn.Module):
+
+    def __init__(self, alpha=1e-4):
+        super(CustomLoss, self).__init__()
+        self.alpha = alpha
+        self.ht = HilbertTransform()
+
+    def generate_frequency_weights(self, n_pts):
+        weights_half = torch.log(torch.linspace(1, 1e6, int(n_pts / 2)))
+        weights_half = weights_half / torch.max(weights_half)
+        weights = torch.cat((weights_half, torch.flip(weights_half, dims=[-1])), dim=-1)
+        return weights
+
+    def compute_envelope(self, signal):
+        analytic_signal = self.ht(signal)
+        envelope = torch.abs(analytic_signal)
+        return envelope
+
+    def forward(self, y_hat, y, ker1, ker2, ker3):
+        # Compute DFT domain signals
+        nfft = y.shape[-1]
+        dft_y_hat = torch.fft.fft(y_hat, n=nfft)
+        dft_y = torch.fft.fft(y, n=nfft)
+
+        # Apply frequency weights
+        freq_weights = self.generate_frequency_weights(y.shape[-1])
+        # freq_weights = torch.ones(freq_weights.shape) # This eliminates the effect of frequency weighting
+        dft_y_hat = dft_y_hat
+        dft_y = dft_y
+
+        # Spectral MSE
+        squared_mag_diff = torch.log(torch.abs(dft_y_hat - dft_y) ** 2)
+        spectral_mse = torch.mean(squared_mag_diff)
+
+        # L1 regularization for the learnt kernels
+        L1_reg = torch.norm(ker1, p=1) + torch.norm(ker2, p=1) + torch.norm(ker3, p=1)
+
+        # Compute envelopes
+        envelope_y_hat = self.compute_envelope(y_hat)
+        envelope_y = self.compute_envelope(y)
+
+        # Envelope MSE
+        envelope_mse = F.mse_loss(envelope_y_hat, envelope_y)
+
+        return envelope_mse #+ self.alpha * L1_reg
     
 def save_tensor_as_wav(tensor, filename, sample_rate=44100):
     # Convert the tensor to a numpy array
@@ -124,6 +171,7 @@ def save_tensor_as_wav(tensor, filename, sample_rate=44100):
 def main():
     # User parameters
     use_snn = False
+    ablation_model = True
 
     # Paths
     input_wavs_dir = './inputs_wav/'
@@ -137,7 +185,7 @@ def main():
     train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=False, num_workers=1)
 
     # Load model for training
-    model = HAMM_SNN(use_snn=use_snn)
+    model = HAMM_SNN(use_snn=use_snn, ablation_model=ablation_model)
     model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
     loss_fn = CustomLoss()
@@ -162,13 +210,13 @@ def main():
         model.train()
 
         # Define branch training strategy
-        if epoch < 50:
+        if epoch < 30:
             freeze_unfreeze_branches(model, branch_to_train=1)
             train_order = 1
-        elif epoch < 100:
+        elif epoch < 40:
             freeze_unfreeze_branches(model, branch_to_train=2)
             train_order = 2
-        elif epoch < 150:
+        elif epoch < 60:
             freeze_unfreeze_branches(model, branch_to_train=3)
             train_order = 3
         else:
@@ -194,6 +242,7 @@ def main():
             y = output_ess
             max_y_mod = torch.max(torch.abs(y))
             y = y / max_y_mod
+            y = y - torch.mean(y) # Remove DC
             x = x.to(device)
             y = y.to(device)
 
@@ -212,7 +261,7 @@ def main():
             x = x.to(device)
             y = y.to(device)
             optimizer.zero_grad()
-            y_hat, ker1, ker2, ker3 = model(x, max_y_mod)
+            y_hat, ker1, ker2, ker3 = model(x, train_order)
             loss = loss_fn(y_hat, y, ker1, ker2, ker3)
             total_loss += loss.item()
             loss.backward()
