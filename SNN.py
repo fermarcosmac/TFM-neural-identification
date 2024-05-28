@@ -172,7 +172,7 @@ def save_tensor_as_wav(tensor, filename, sample_rate=44100):
 def main():
     # User parameters
     use_snn = False
-    ablation_model = True
+    ablation_model = False
 
     # Paths
     input_wavs_dir = './inputs_wav/'

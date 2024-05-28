@@ -101,7 +101,7 @@ class BranchSNN(nn.Module):
         pha, mem9 = self.lif9(pha, mem9)
 
         mod = torch.squeeze(mod)
-        pha = torch.squeeze(pha)
+        pha = -2*torch.pi*self.sigmoid(torch.squeeze(pha))
 
         return mod, pha
     
@@ -196,9 +196,9 @@ class HAMM_SNN(nn.Module):
             self.branch2 = LearnableDFT(length=2*ker_length)
             self.branch3 = LearnableDFT(length=2*ker_length)
         elif use_snn:
-            self.branch1 = BranchNN(input_size=input_size)
-            self.branch2 = BranchNN(input_size=input_size)
-            self.branch3 = BranchNN(input_size=input_size)
+            self.branch1 = BranchSNN(input_size=input_size)
+            self.branch2 = BranchSNN(input_size=input_size)
+            self.branch3 = BranchSNN(input_size=input_size)
         else:
             self.branch1 = BranchNN(input_size=input_size)
             self.branch2 = BranchNN(input_size=input_size)
@@ -222,18 +222,18 @@ class HAMM_SNN(nn.Module):
             num_steps = int(1000 * 1e-3 * 5)
             spike_ff = spikegen.rate(ff, num_steps=num_steps)
             # Forward
-            Ker1_mod, Ker1_pha = self.branch1(spike_ff)
-            Ker2_mod, Ker2_pha = self.branch2(spike_ff)
-            Ker3_mod, Ker3_pha = self.branch3(spike_ff)
+            Ker1_mod, Ker1_pha_diff = self.branch1(spike_ff)
+            Ker2_mod, Ker2_pha_diff = self.branch2(spike_ff)
+            Ker3_mod, Ker3_pha_diff = self.branch3(spike_ff)
             # Decoding
             Ker1_mod = torch.mean(Ker1_mod,dim=[0])
-            Ker1_pha = torch.mean(Ker1_pha,dim=[0])
+            Ker1_pha_diff = torch.mean(Ker1_pha_diff,dim=[0])
             Ker1_mod = torch.exp(self.sigmoid(Ker1_mod))
             Ker2_mod = torch.mean(Ker2_mod,dim=[0])
-            Ker2_pha = torch.mean(Ker2_pha,dim=[0])
+            Ker2_pha_diff = torch.mean(Ker2_pha_diff,dim=[0])
             Ker2_mod = torch.exp(self.sigmoid(Ker2_mod))
             Ker3_mod = torch.mean(Ker3_mod,dim=[0])
-            Ker3_pha = torch.mean(Ker3_pha,dim=[0])
+            Ker3_pha_diff = torch.mean(Ker3_pha_diff,dim=[0])
             Ker3_mod = torch.exp(self.sigmoid(Ker3_mod))
         else:
             # Forward
