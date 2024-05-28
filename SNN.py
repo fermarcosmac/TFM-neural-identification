@@ -279,7 +279,13 @@ def main():
     ker2 = model.ifftshift(ker2)
     ker3 = model.ifftshift(ker3)
     # Save
-    if use_snn:
+    if ablation_model:
+        save_path_1 = os.path.join('kernels/LV','ker1.wav')
+        save_path_2 = os.path.join('kernels/LV','ker2.wav')
+        save_path_3 = os.path.join('kernels/LV','ker3.wav')
+        save_path_model = os.path.join('models/LV','model.pth')
+        save_path_loss = os.path.join('models/LV','loss_history.npy')
+    elif use_snn:
         save_path_1 = os.path.join('kernels/SNN','ker1.wav')
         save_path_2 = os.path.join('kernels/SNN','ker2.wav')
         save_path_3 = os.path.join('kernels/SNN','ker3.wav')

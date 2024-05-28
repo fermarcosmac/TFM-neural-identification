@@ -158,6 +158,9 @@ def normalize_signal(signal):
 
 def main():
 
+    # Parameters
+    ablation_model = True
+
     # Load the loss history from the .npy file
     SNN_loss_history = np.load('models/SNN/loss_history.npy')
     NN_loss_history = np.load('models/NN/loss_history.npy')
@@ -278,7 +281,7 @@ def main():
 
     # Load trained models
     NN_model_path = os.path.join('models/NN/model.pth')
-    model_NN = HAMM_SNN(use_snn=False)
+    model_NN = HAMM_SNN(use_snn=False,ablation_model=ablation_model)
     model_NN.load_state_dict(torch.load(NN_model_path, map_location=torch.device('cpu')))
     model_NN.eval()
 
