@@ -15,7 +15,7 @@ from models.models import HAMM_SNN
 import matplotlib.pyplot as plt
 from scipy.io.wavfile import write
 from monai.networks.layers import HilbertTransform
-my_pc = True
+my_pc = False
 if my_pc:
     import torchaudio
 else:
@@ -111,9 +111,10 @@ class CustomDataset(Dataset):
     
 class CustomLoss(torch.nn.Module):
 
-    def __init__(self, alpha=1e-4):
+    def __init__(self, alpha=1e-4, beta=1e-3):
         super(CustomLoss, self).__init__()
         self.alpha = alpha
+        self.beta = beta
         self.ht = HilbertTransform()
 
     def generate_frequency_weights(self, n_pts):
@@ -153,7 +154,7 @@ class CustomLoss(torch.nn.Module):
         # Envelope MSE
         envelope_mse = F.mse_loss(envelope_y_hat, envelope_y)
 
-        return envelope_mse #+ self.alpha * L1_reg
+        return self.beta*spectral_mse + envelope_mse #+ self.alpha * L1_reg
     
 def save_tensor_as_wav(tensor, filename, sample_rate=44100):
     # Convert the tensor to a numpy array
