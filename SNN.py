@@ -154,7 +154,7 @@ class CustomLoss(torch.nn.Module):
         # Envelope MSE
         envelope_mse = F.mse_loss(envelope_y_hat, envelope_y)
 
-        return self.beta*spectral_mse + envelope_mse #+ self.alpha * L1_reg
+        return self.beta*spectral_mse + envelope_mse + self.alpha * L1_reg
     
 def save_tensor_as_wav(tensor, filename, sample_rate=44100):
     # Convert the tensor to a numpy array
@@ -171,7 +171,7 @@ def save_tensor_as_wav(tensor, filename, sample_rate=44100):
 ## MAIN ##
 def main():
     # User parameters
-    use_snn = False
+    use_snn = True
     ablation_model = False
 
     # Paths
@@ -211,13 +211,13 @@ def main():
         model.train()
 
         # Define branch training strategy
-        if epoch < 30:
+        if epoch < 60:
             freeze_unfreeze_branches(model, branch_to_train=1)
             train_order = 1
-        elif epoch < 40:
+        elif epoch < 100:
             freeze_unfreeze_branches(model, branch_to_train=2)
             train_order = 2
-        elif epoch < 60:
+        elif epoch < 140:
             freeze_unfreeze_branches(model, branch_to_train=3)
             train_order = 3
         else:
