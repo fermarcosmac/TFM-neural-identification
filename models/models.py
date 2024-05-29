@@ -210,7 +210,7 @@ class HAMM_SNN(nn.Module):
         self.sigmoid = nn.Sigmoid()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') 
 
-    def forward(self, x, train_order):
+    def forward(self, x, train_order: int = 0):
 
         # Invariant fourier features
         t = np.linspace(start=0,stop=2,num=ker_length*2)

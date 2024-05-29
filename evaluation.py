@@ -158,17 +158,16 @@ def normalize_signal(signal):
 
 def main():
 
-    # Parameters
-    ablation_model = True
-
     # Load the loss history from the .npy file
     SNN_loss_history = np.load('models/SNN/loss_history.npy')
     NN_loss_history = np.load('models/NN/loss_history.npy')
+    LV_loss_history = np.load('models/LV/loss_history.npy')
 
     # Plot the loss history
     plt.figure(figsize=(7,4))
     plt.plot(NN_loss_history, label='NN')
     plt.plot(SNN_loss_history, label='SNN')
+    plt.plot(LV_loss_history, label='LV')
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.title('Training Loss Evolution')
@@ -182,33 +181,35 @@ def main():
     # Load kernels
     NN_dir = os.path.join('kernels/NN')
     SNN_dir = os.path.join('kernels/SNN')
+    LV_dir = os.path.join('kernels/LV')
     gt_dir = os.path.join('kernels/ground_truth')
     ker_NN_dict, sr = read_kernels(NN_dir)
     ker_SNN_dict, sr = read_kernels(SNN_dir)
+    ker_LV_dict, sr = read_kernels(LV_dir)
     ker_gt_dict, sr = read_kernels(gt_dir)
 
-    # Plot kernels
-    # Create a figure and a 1x3 subplot grid
-    fig, axs = plt.subplots(3, 3, figsize=(7, 7))
-    # Iterate over the dictionary items and plot each signal
-    for ax, (title, signal) in zip(axs[0], ker_gt_dict.items()):
-        ax.plot(signal)
-        ax.set_title('True ' + title)
-        ax.set_xlabel('X-axis label')
-        ax.set_ylabel('Y-axis label')
-    for ax, (title, signal) in zip(axs[1], ker_NN_dict.items()):
-        ax.plot(signal)
-        ax.set_title('NN: ' + title)
-        ax.set_xlabel('X-axis label')
-        ax.set_ylabel('Y-axis label')
-    for ax, (title, signal) in zip(axs[2], ker_SNN_dict.items()):
-        ax.plot(signal)
-        ax.set_title('SNN: ' + title)
-        ax.set_xlabel('X-axis label')
-        ax.set_ylabel('Y-axis label')
+    """ # Plot kernels """
+    """ # Create a figure and a 1x3 subplot grid """
+    """ fig, axs = plt.subplots(3, 3, figsize=(7, 7)) """
+    """ # Iterate over the dictionary items and plot each signal """
+    """ for ax, (title, signal) in zip(axs[0], ker_gt_dict.items()): """
+    """     ax.plot(signal) """
+    """     ax.set_title('True ' + title) """
+    """     ax.set_xlabel('X-axis label') """
+    """     ax.set_ylabel('Y-axis label') """
+    """ for ax, (title, signal) in zip(axs[1], ker_NN_dict.items()): """
+    """     ax.plot(signal) """
+    """     ax.set_title('NN: ' + title) """
+    """     ax.set_xlabel('X-axis label') """
+    """     ax.set_ylabel('Y-axis label') """
+    """ for ax, (title, signal) in zip(axs[2], ker_SNN_dict.items()): """
+    """     ax.plot(signal) """
+    """     ax.set_title('SNN: ' + title) """
+    """     ax.set_xlabel('X-axis label') """
+    """     ax.set_ylabel('Y-axis label') """
 
-    plt.tight_layout()
-    plt.show()
+    """ plt.tight_layout() """
+    """ plt.show() """
 
 
     # Initialize error dict and metric
@@ -218,15 +219,18 @@ def main():
     # Loop over each key and compute the errors
     for key in ker_gt_dict:
         true_signal = ker_gt_dict[key]
-        estimated_signal1 = ker_NN_dict[key]
-        estimated_signal2 = ker_SNN_dict[key]
+        estimated_ker_NN = ker_NN_dict[key]
+        estimated_ker_SNN = ker_SNN_dict[key]
+        estimated_ker_LV = ker_LV_dict[key]
 
-        sdr_NN = response_sdr(true_signal, estimated_signal1)
-        sdr_SNN = response_sdr(true_signal, estimated_signal2)
+        sdr_NN = response_sdr(true_signal, estimated_ker_NN)
+        sdr_SNN = response_sdr(true_signal, estimated_ker_SNN)
+        sdr_LV = response_sdr(true_signal, estimated_ker_LV)
 
         sdr_results[key] = {
             'NN': sdr_NN,
-            'SNN': sdr_SNN
+            'SNN': sdr_SNN,
+            'LV': sdr_LV
         }
 
     # Print the error results
@@ -236,29 +240,37 @@ def main():
             print(f"  {method}: {error}")
 
     # Plot the signals for visualization
-    fig, axs = plt.subplots(3, 2, figsize=(6, 6))
+    fig, axs = plt.subplots(3, 3, figsize=(6, 6))
 
     for i, key in enumerate(ker_gt_dict):
         true_signal = ker_gt_dict[key]
-        estimated_signal1 = ker_NN_dict[key]
-        estimated_signal2 = ker_SNN_dict[key]
+        estimated_ker_NN = ker_NN_dict[key]
+        estimated_ker_SNN = ker_SNN_dict[key]
+        estimated_ker_LV = ker_LV_dict[key]
 
         # Normalize the signals
         true_signal = normalize_signal(true_signal)
-        estimated_signal1 = normalize_signal(estimated_signal1)
-        estimated_signal2 = normalize_signal(estimated_signal2)
+        estimated_ker_NN = normalize_signal(estimated_ker_NN)
+        estimated_ker_SNN = normalize_signal(estimated_ker_SNN)
+        estimated_ker_LV = normalize_signal(estimated_ker_LV)
 
-        # Plot true vs Method1
+        # Plot true vs NN
         axs[i, 0].plot(true_signal, label='True')
-        axs[i, 0].plot(estimated_signal1, label='NN')
+        axs[i, 0].plot(estimated_ker_NN, label='NN')
         axs[i, 0].set_title(f'True vs NN for {key}')
         axs[i, 0].legend()
 
-        # Plot true vs Method2
+        # Plot true vs SNN
         axs[i, 1].plot(true_signal, label='True')
-        axs[i, 1].plot(estimated_signal2, label='SNN')
+        axs[i, 1].plot(estimated_ker_SNN, label='SNN')
         axs[i, 1].set_title(f'True vs  SNN for {key}')
         axs[i, 1].legend()
+
+        # Plot true vs LV
+        axs[i, 2].plot(true_signal, label='True')
+        axs[i, 2].plot(estimated_ker_LV, label='LV')
+        axs[i, 2].set_title(f'True vs  LV for {key}')
+        axs[i, 2].legend()
 
     plt.tight_layout()
     plt.show() 
@@ -281,19 +293,26 @@ def main():
 
     # Load trained models
     NN_model_path = os.path.join('models/NN/model.pth')
-    model_NN = HAMM_SNN(use_snn=False,ablation_model=ablation_model)
+    model_NN = HAMM_SNN(use_snn=False,ablation_model=False)
     model_NN.load_state_dict(torch.load(NN_model_path, map_location=torch.device('cpu')))
     model_NN.eval()
 
     SNN_model_path = os.path.join('models/SNN/model.pth')
-    model_SNN = HAMM_SNN(use_snn=True)
+    model_SNN = HAMM_SNN(use_snn=True, ablation_model=False)
     model_SNN.load_state_dict(torch.load(SNN_model_path, map_location=torch.device('cpu')))
     model_SNN.eval()
+
+    LV_model_path = os.path.join('models/LV/model.pth')
+    model_LV = HAMM_SNN(use_snn=False, ablation_model=True)
+    model_LV.load_state_dict(torch.load(LV_model_path, map_location=torch.device('cpu')))
+    model_LV.eval()
 
     error_NN_ess = []
     error_NN_mls = []
     error_SNN_ess = []
     error_SNN_mls = []
+    error_LV_ess = []
+    error_LV_mls = []
     plot_flag = True
 
     for input_ess, input_mls, output_ess, output_mls in tqdm(train_dataloader):
@@ -312,20 +331,24 @@ def main():
         x_mls = x_mls.to(device)
         y_mls = y_mls.to(device)
         # Forward pass
-        y_hat_NN_ess, _, _, _ = model_NN(x_ess,max_y_mod_ess)
-        y_hat_NN_mls, _, _, _ = model_NN(x_mls,max_y_mod_mls)
-        y_hat_SNN_ess, _, _, _ = model_SNN(x_ess,max_y_mod_ess)
-        y_hat_SNN_mls, _, _, _ = model_SNN(x_mls,max_y_mod_mls)
+        y_hat_NN_ess, _, _, _ = model_NN(x_ess)
+        y_hat_NN_mls, _, _, _ = model_NN(x_mls)
+        y_hat_SNN_ess, _, _, _ = model_SNN(x_ess)
+        y_hat_SNN_mls, _, _, _ = model_SNN(x_mls)
+        y_hat_LV_ess, _, _, _ = model_LV(x_ess)
+        y_hat_LV_mls, _, _, _ = model_LV(x_mls)
         # Compute loss
         error_NN_ess.append(spectral_mse(y_hat_NN_ess, y_ess))
         error_NN_mls.append(spectral_mse(y_hat_NN_mls, y_mls))
         error_SNN_ess.append(spectral_mse(y_hat_SNN_ess, y_ess))
         error_SNN_mls.append(spectral_mse(y_hat_SNN_mls, y_mls))
+        error_LV_ess.append(spectral_mse(y_hat_LV_ess, y_ess))
+        error_LV_mls.append(spectral_mse(y_hat_LV_mls, y_mls))
 
         # Plot one example
         if plot_flag:
             ## Time domain signals ##
-            fig, axs = plt.subplots(2, 2, figsize=(7, 5))
+            fig, axs = plt.subplots(3, 2, figsize=(7, 5))
             # NN with ESS input
             axs[0, 0].plot(np.squeeze(y_ess.cpu().numpy())[140000:150000], label='True')
             axs[0, 0].plot(np.squeeze(y_hat_NN_ess.detach().cpu().numpy())[140000:150000], label='Predicted')
@@ -350,11 +373,23 @@ def main():
             axs[1, 1].set_title('SNN with MLS input')
             axs[1, 1].legend()
 
+            # LV with ESS input
+            axs[2, 0].plot(np.squeeze(y_ess.cpu().numpy())[140000:150000], label='True')
+            axs[2, 0].plot(np.squeeze(y_hat_LV_ess.detach().cpu().numpy())[140000:150000], label='Predicted')
+            axs[2, 0].set_title('LV with ESS input')
+            axs[2, 0].legend()
+
+            # LV with MLS input
+            axs[2, 1].plot(np.squeeze(y_mls.cpu().numpy())[140000:140300], label='True')
+            axs[2, 1].plot(np.squeeze(y_hat_LV_mls.detach().cpu().numpy())[140000:140300], label='Predicted')
+            axs[2, 1].set_title('LV with MLS input')
+            axs[2, 1].legend()
+
             plt.tight_layout()
             plt.show()
 
             ## Frequency domain signals ##
-            fig, axs = plt.subplots(2, 2, figsize=(7, 5))
+            fig, axs = plt.subplots(3, 2, figsize=(7, 5))
             # NN with ESS input
             plot_dft(axs[0, 0], y_ess, y_hat_NN_ess, 'NN with ESS input', sr)
 
@@ -366,6 +401,12 @@ def main():
 
             # SNN with MLS input
             plot_dft(axs[1, 1], y_mls, y_hat_SNN_mls, 'SNN with MLS input', sr)
+
+            # LV with ESS input
+            plot_dft(axs[2, 0], y_ess, y_hat_LV_ess, 'LV with ESS input', sr)
+
+            # LV with MLS input
+            plot_dft(axs[2, 1], y_mls, y_hat_LV_mls, 'LV with MLS input', sr)
 
             plt.tight_layout()
             plt.show()
@@ -383,14 +424,25 @@ def main():
     mu_NN_mls = np.mean(error_NN_mls)
     std_NN_mls = np.std(error_NN_mls)
 
+    # ESS -> SNN
     error_SNN_ess = np.array([element.detach().numpy() for element in error_SNN_ess])
     mu_SNN_ess = np.mean(error_SNN_ess)
     std_SNN_ess = np.std(error_SNN_ess)
 
-    # MLS -> NN
+    # MLS -> SNN
     error_SNN_mls = np.array([element.detach().numpy() for element in error_SNN_mls])
     mu_SNN_mls = np.mean(error_SNN_mls)
     std_SNN_mls = np.std(error_SNN_mls)
+
+    # ESS -> LV
+    error_LV_ess = np.array([element.detach().numpy() for element in error_LV_ess])
+    mu_LV_ess = np.mean(error_LV_ess)
+    std_LV_ess = np.std(error_LV_ess)
+
+    # MLS -> LV
+    error_LV_mls = np.array([element.detach().numpy() for element in error_LV_mls])
+    mu_LV_mls = np.mean(error_LV_mls)
+    std_LV_mls = np.std(error_LV_mls)
 
     print("Results:")
     print("========")
@@ -409,6 +461,14 @@ def main():
     print("MLS -> SNN:")
     print(f"Mean Spectral Error: {mu_SNN_mls:.4f}")
     print(f"Standard Deviation: {std_SNN_mls:.4f}")
+    print("========")
+    print("ESS -> LV:")
+    print(f"Mean Spectral Error: {mu_LV_ess:.4f}")
+    print(f"Standard Deviation: {std_LV_ess:.4f}")
+    print("========")
+    print("MLS -> LV:")
+    print(f"Mean Spectral Error: {mu_LV_mls:.4f}")
+    print(f"Standard Deviation: {std_LV_mls:.4f}")
 
 
 if __name__ == '__main__':
