@@ -294,6 +294,7 @@ class HAMM_SNN(nn.Module):
                 g3   = gains[2]
             case 1:
                 g1   = gains[0]
+                g3   = gains[2]
             case 2:
                 g2   = gains[1]
             case 3:
