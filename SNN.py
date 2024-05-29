@@ -123,10 +123,11 @@ class CustomLoss(torch.nn.Module):
         weights = torch.cat((weights_half, torch.flip(weights_half, dims=[-1])), dim=-1)
         return weights
 
-    def compute_envelope(self, signal):
+    def compute_analytic_components(self, signal):
         analytic_signal = self.ht(signal)
         envelope = torch.abs(analytic_signal)
-        return envelope
+        phase = torch.angle(analytic_signal)
+        return envelope, phase
 
     def forward(self, y_hat, y, ker1, ker2, ker3):
         # Compute DFT domain signals
@@ -148,13 +149,14 @@ class CustomLoss(torch.nn.Module):
         L1_reg = torch.norm(ker1, p=1) + torch.norm(ker2, p=1) + torch.norm(ker3, p=1)
 
         # Compute envelopes
-        envelope_y_hat = self.compute_envelope(y_hat)
-        envelope_y = self.compute_envelope(y)
+        envelope_y_hat, phase_y_hat = self.compute_analytic_components(y_hat)
+        envelope_y, phase_y = self.compute_analytic_components(y)
 
         # Envelope MSE
         envelope_mse = F.mse_loss(envelope_y_hat, envelope_y)
+        phase_mse = F.mse_loss(phase_y_hat, phase_y)
 
-        return self.beta*spectral_mse + envelope_mse #+ self.alpha * L1_reg
+        return self.beta*spectral_mse + envelope_mse + (1/20)*phase_mse #+ self.alpha * L1_reg
     
 def save_tensor_as_wav(tensor, filename, sample_rate=44100):
     # Convert the tensor to a numpy array
