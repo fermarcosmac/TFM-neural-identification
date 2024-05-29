@@ -154,7 +154,7 @@ class CustomLoss(torch.nn.Module):
         # Envelope MSE
         envelope_mse = F.mse_loss(envelope_y_hat, envelope_y)
 
-        return self.beta*spectral_mse + envelope_mse + self.alpha * L1_reg
+        return self.beta*spectral_mse + envelope_mse #+ self.alpha * L1_reg
     
 def save_tensor_as_wav(tensor, filename, sample_rate=44100):
     # Convert the tensor to a numpy array
@@ -192,7 +192,7 @@ def main():
     loss_fn = CustomLoss()
 
     # Train!
-    epochs = 250
+    epochs = 260
     loss_history = []
 
     # Define function to freeze/unfreeze branches
@@ -211,13 +211,13 @@ def main():
         model.train()
 
         # Define branch training strategy
-        if epoch < 60:
+        if epoch < 100:
             freeze_unfreeze_branches(model, branch_to_train=1)
             train_order = 1
-        elif epoch < 100:
+        elif epoch < 160:
             freeze_unfreeze_branches(model, branch_to_train=2)
             train_order = 2
-        elif epoch < 140:
+        elif epoch < 200:
             freeze_unfreeze_branches(model, branch_to_train=3)
             train_order = 3
         else:
