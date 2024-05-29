@@ -14,7 +14,7 @@ from scipy.signal import convolve
 # plt.plot(np.squeeze((ker3).detach().numpy()))
 # plt.show()
 
-ker_length  = 19 # Number of samples in identified kernels (divided by 4)
+ker_length  = 19*4 # Number of samples in identified kernels (divided by 4)
 num_ff = 20 # Number of Fourier Features
 x_length = 570000
  
@@ -294,7 +294,6 @@ class HAMM_SNN(nn.Module):
                 g3   = gains[2]
             case 1:
                 g1   = gains[0]
-                g3   = gains[2]
             case 2:
                 g2   = gains[1]
             case 3:
