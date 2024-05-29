@@ -171,8 +171,8 @@ def save_tensor_as_wav(tensor, filename, sample_rate=44100):
 ## MAIN ##
 def main():
     # User parameters
-    use_snn = True
-    ablation_model = False
+    use_snn = False
+    ablation_model = True
 
     # Paths
     input_wavs_dir = './inputs_wav/'
@@ -192,7 +192,7 @@ def main():
     loss_fn = CustomLoss()
 
     # Train!
-    epochs = 200
+    epochs = 250
     loss_history = []
 
     # Define function to freeze/unfreeze branches

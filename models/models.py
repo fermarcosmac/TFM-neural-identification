@@ -14,7 +14,7 @@ from scipy.signal import convolve
 # plt.plot(np.squeeze((ker3).detach().numpy()))
 # plt.show()
 
-ker_length  = 19*2 # Number of samples in identified kernels (divided by 4)
+ker_length  = 19 # Number of samples in identified kernels (divided by 4)
 num_ff = 20 # Number of Fourier Features
 x_length = 570000
  
