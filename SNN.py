@@ -15,7 +15,7 @@ from models.models import HAMM_SNN
 import matplotlib.pyplot as plt
 from scipy.io.wavfile import write
 from monai.networks.layers import HilbertTransform
-my_pc = True
+my_pc = False
 if my_pc:
     import torchaudio
 else:
