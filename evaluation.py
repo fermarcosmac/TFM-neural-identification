@@ -188,6 +188,7 @@ def main():
     ker_LV_dict, sr = read_kernels(LV_dir)
     ker_gt_dict, sr = read_kernels(gt_dir)
 
+
     """ # Plot kernels """
     """ # Create a figure and a 1x3 subplot grid """
     """ fig, axs = plt.subplots(3, 3, figsize=(7, 7)) """

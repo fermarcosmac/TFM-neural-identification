@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.signal import chirp, max_len_seq
 
 # External parameters
-fs = 48000
+fs = 64000
 Norder = 3
 FACTOR_UP = Norder
 fs_up = fs*FACTOR_UP
@@ -14,6 +14,7 @@ fs_up = fs*FACTOR_UP
 f0 = 1
 f1 = 24000
 f1 = round(min([f1, 0.95 * fs / 2]))
+f1 = f1*FACTOR_UP
 duration = 2
 phi0 = -np.pi * 0.5
 

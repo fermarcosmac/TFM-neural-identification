@@ -12,7 +12,7 @@ save_path_ess = "./inputs_wav/ESS/"
 save_path_mls = "./inputs_wav/MLS/"
 
 # External parameters
-fs = 48000
+fs = 64000
 Norder = 3
 FACTOR_UP = Norder
 fs_up = int(fs * FACTOR_UP)
@@ -22,6 +22,7 @@ num_signals = 20
 f0 = 1
 f1 = 24000
 f1 = round(min([f1, 0.95 * fs / 2]))
+f1 = f1*FACTOR_UP
 duration = 2
 
 # Chirp generation function (deterministic)

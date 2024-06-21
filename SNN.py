@@ -15,7 +15,7 @@ from models.models import HAMM_SNN
 import matplotlib.pyplot as plt
 from scipy.io.wavfile import write
 from monai.networks.layers import HilbertTransform
-my_pc = False
+my_pc = True
 if my_pc:
     import torchaudio
 else:
@@ -248,7 +248,7 @@ def main():
             y = y.to(device)
 
             optimizer.zero_grad()
-            y_hat, ker1, ker2, ker3 = model(x, train_order)
+            y_hat, ker1, ker2, ker3 = model(x, train_order) # Forward
             loss = loss_fn(y_hat, y, ker1, ker2, ker3)
             total_loss += loss.item()
             loss.backward()
@@ -262,7 +262,7 @@ def main():
             x = x.to(device)
             y = y.to(device)
             optimizer.zero_grad()
-            y_hat, ker1, ker2, ker3 = model(x, train_order)
+            y_hat, ker1, ker2, ker3 = model(x, train_order) # Forward
             loss = loss_fn(y_hat, y, ker1, ker2, ker3)
             total_loss += loss.item()
             loss.backward()
