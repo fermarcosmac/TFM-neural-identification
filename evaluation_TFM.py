@@ -7,6 +7,7 @@ from models.models import HAMM_SNN
 from torch.utils.data import Dataset, DataLoader
 import torch
 from tqdm import tqdm
+from scipy.io import savemat
 my_pc = True
 if my_pc:
     import torchaudio
@@ -161,9 +162,7 @@ def main():
     # Load the loss history from the .npy file
     LV_loss_history = np.load('models/LV/loss_history.npy')
 
-    # Configure matplotlib to use LaTeX for text rendering
-    #plt.rcParams['text.usetex'] = True
-    #plt.rcParams['text.latex.preamble'] = r'\usepackage{amsmath}'
+    savemat('.\models\LV\LV_loss_history.mat', {'data': LV_loss_history})
 
     # Plot the loss history
     plt.figure(figsize=(7, 4))
