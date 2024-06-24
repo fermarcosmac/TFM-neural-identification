@@ -111,7 +111,7 @@ class CustomDataset(Dataset):
     
 class CustomLoss(torch.nn.Module):
 
-    def __init__(self, alpha=1e-4, beta=1e-3*1e3):
+    def __init__(self, alpha=1e-4, beta=1e-3):
         super(CustomLoss, self).__init__()
         self.alpha = alpha
         self.beta = beta
@@ -154,7 +154,7 @@ class CustomLoss(torch.nn.Module):
         # Envelope MSE
         envelope_mse = F.mse_loss(envelope_y_hat, envelope_y)
 
-        return self.beta*spectral_mse #+ envelope_mse #+ self.alpha * L1_reg
+        return self.beta*spectral_mse + envelope_mse #+ self.alpha * L1_reg
     
 def save_tensor_as_wav(tensor, filename, sample_rate=44100):
     # Convert the tensor to a numpy array
